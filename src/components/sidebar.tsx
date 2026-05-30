@@ -7,7 +7,7 @@ import { useRegion } from "@/context/region-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   LayoutDashboard, Server, Network, HardDrive, Shield, Globe, Webhook,
-  Layers, Settings, ChevronLeft, ChevronRight, ChevronDown, UserPlus, Container, Users, Table2, Zap, Smartphone, TrendingDown,
+  Layers, Settings, ChevronLeft, ChevronRight, ChevronDown, UserPlus, Container, Users, Table2, Zap, Smartphone, TrendingDown, Bell,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -24,6 +24,7 @@ const NAV_ITEMS: { id: Section; label: string; icon: typeof LayoutDashboard; gro
   { id: "dynamodb", label: "DynamoDB", icon: Table2, group: "Resources" },
   { id: "lambda", label: "Lambda", icon: Zap, group: "Resources" },
   { id: "amplify", label: "Amplify", icon: Smartphone, group: "Resources" },
+  { id: "push-notifications", label: "Push Notifications", icon: Bell, group: "Resources" },
   { id: "stacks", label: "CloudFormation", icon: Layers, group: "Operations" },
   { id: "cost-analysis", label: "Cost Analysis", icon: TrendingDown, group: "Operations" },
   { id: "accounts", label: "Accounts", icon: UserPlus, group: "Operations" },

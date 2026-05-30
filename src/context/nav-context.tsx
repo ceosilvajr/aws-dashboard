@@ -18,6 +18,7 @@ export type Section =
   | "lambda"
   | "amplify"
   | "cost-analysis"
+  | "push-notifications"
   | "settings";
 
 interface NavContextType {
