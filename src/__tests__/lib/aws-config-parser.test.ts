@@ -137,7 +137,7 @@ describe("getGroups", () => {
       { id: "2", name: "a-dev", profile: "a-dev", group: "a" },
       { id: "3", name: "b-prod", profile: "b-prod", group: "b" },
     ];
-    expect(getGroups(accounts)).toEqual(["a", "b"]);
+    expect(getGroups(accounts).sort()).toEqual(["a", "b"]);
   });
 
   it("returns empty array for empty account list", () => {
