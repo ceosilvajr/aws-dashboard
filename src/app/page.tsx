@@ -19,6 +19,7 @@ import { DynamoDbSection } from "@/components/sections/dynamodb-section";
 import { LambdaSection } from "@/components/sections/lambda-section";
 import { AmplifySection } from "@/components/sections/amplify-section";
 import { CostAnalysisSection } from "@/components/sections/cost-analysis-section";
+import { PushNotificationsSection } from "@/components/sections/push-notifications-section";
 
 function MainContent() {
   const { section } = useNav();
@@ -41,6 +42,7 @@ function MainContent() {
         {section === "lambda" && <LambdaSection />}
         {section === "amplify" && <AmplifySection />}
         {section === "cost-analysis" && <CostAnalysisSection />}
+        {section === "push-notifications" && <PushNotificationsSection />}
         {section === "settings" && <SettingsSection />}
       </div>
     </main>
