@@ -48,7 +48,7 @@ export function PushNotificationsSection() {
     setLoading(false);
   }, [profile, region]);
 
-  useEffect(() => { fetchPlatforms(); }, [fetchPlatforms]);
+  useEffect(() => { fetchPlatforms(); }, [fetchPlatforms]); // eslint-disable-line react-hooks/set-state-in-effect
 
   if (selectedPlatform) {
     return (

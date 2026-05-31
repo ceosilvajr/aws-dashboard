@@ -30,7 +30,7 @@ export function StacksSection() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    if (!profile) { setStacks([]); return; }
+    if (!profile) { setStacks([]); return; } // eslint-disable-line react-hooks/set-state-in-effect
     setLoading(true);
     fetch(`/api/stacks?profile=${profile}`)
       .then((r) => r.json())

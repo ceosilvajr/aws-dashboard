@@ -36,7 +36,7 @@ export function CognitoSection() {
     setLoading(false);
   }, [profile, region]);
 
-  useEffect(() => { fetchPools(); }, [fetchPools]);
+  useEffect(() => { fetchPools(); }, [fetchPools]); // eslint-disable-line react-hooks/set-state-in-effect
 
   if (selectedPool) {
     return (
