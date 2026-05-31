@@ -52,7 +52,7 @@ export function EcsSection() {
     setLoading(false);
   }, [profile, region]);
 
-  useEffect(() => { fetchEcs(); }, [fetchEcs]);
+  useEffect(() => { fetchEcs(); }, [fetchEcs]); // eslint-disable-line react-hooks/set-state-in-effect
 
   const filtered = search ? services.filter((s) => s.service.toLowerCase().includes(search.toLowerCase())) : services;
   const grouped = filtered.reduce<Record<string, ServiceInfo[]>>((acc, svc) => {
@@ -139,6 +139,7 @@ function EcsDetailView({ svc, onBack }: { svc: ServiceInfo; onBack: () => void }
 
   useEffect(() => {
     if (!profile) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     fetch(`/api/ecs/detail?profile=${profile}&cluster=${encodeURIComponent(svc.cluster)}&service=${encodeURIComponent(svc.service)}`)
       .then((r) => r.json()).then(setDetail).catch(() => setDetail(null)).finally(() => setLoading(false));

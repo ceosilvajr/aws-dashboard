@@ -51,7 +51,7 @@ export function DashboardSection() {
     setLoading(false);
   }, [profile, region]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => { fetchAll(); }, [fetchAll]); // eslint-disable-line react-hooks/set-state-in-effect
 
   const healthy = ecs.services.filter((s) => s.status === "healthy").length;
   const total = ecs.services.length;

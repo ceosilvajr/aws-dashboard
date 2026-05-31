@@ -67,7 +67,7 @@ export function PushNotificationDetail({ platformArn, platformName, platform, pr
     setLoading(false);
   }, [platformArn, profile, region]);
 
-  useEffect(() => { fetchDetail(); }, [fetchDetail]);
+  useEffect(() => { fetchDetail(); }, [fetchDetail]); // eslint-disable-line react-hooks/set-state-in-effect
 
   const enabledCount = data?.endpoints?.filter((e) => e.enabled).length ?? 0;
   const disabledCount = (data?.endpoints?.length ?? 0) - enabledCount;

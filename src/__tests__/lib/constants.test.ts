@@ -9,7 +9,7 @@ afterEach(() => {
 describe("getRegion", () => {
   it("returns the ?region= query param when present", async () => {
     const { getRegion } = await import("@/lib/constants");
-    const req = { nextUrl: new URL("http://localhost/api/foo?region=eu-west-1") } as any;
+    const req = { nextUrl: new URL("http://localhost/api/foo?region=eu-west-1") } as { nextUrl: URL };
     expect(getRegion(req)).toBe("eu-west-1");
   });
 
@@ -17,7 +17,7 @@ describe("getRegion", () => {
     vi.stubEnv("AWS_DASHBOARD_REGION", "us-west-2");
     vi.resetModules();
     const { getRegion } = await import("@/lib/constants");
-    const req = { nextUrl: new URL("http://localhost/api/foo") } as any;
+    const req = { nextUrl: new URL("http://localhost/api/foo") } as { nextUrl: URL };
     expect(getRegion(req)).toBe("us-west-2");
   });
 
@@ -31,7 +31,7 @@ describe("getRegion", () => {
     vi.resetModules();
     try {
       const { getRegion } = await import("@/lib/constants");
-      const req = { nextUrl: new URL("http://localhost/api/foo") } as any;
+      const req = { nextUrl: new URL("http://localhost/api/foo") } as { nextUrl: URL };
       expect(getRegion(req)).toBe("ap-southeast-1");
     } finally {
       if (origDashboard !== undefined) process.env.AWS_DASHBOARD_REGION = origDashboard;

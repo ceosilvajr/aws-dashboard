@@ -16,6 +16,7 @@ describe("cn", () => {
   });
 
   it("handles undefined and null inputs", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(cn("foo", undefined, null as any, "bar")).toBe("foo bar");
   });
 });

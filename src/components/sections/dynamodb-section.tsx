@@ -68,7 +68,7 @@ export function DynamoDbSection() {
     setLoading(false);
   }, [profile, region]);
 
-  useEffect(() => { fetchTables(); }, [fetchTables]);
+  useEffect(() => { fetchTables(); }, [fetchTables]); // eslint-disable-line react-hooks/set-state-in-effect
 
   const toggleTable = async (table: TableInfo) => {
     const key = `${table.profile}::${table.tableName}`;

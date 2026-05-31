@@ -42,6 +42,7 @@ export function OverviewSection() {
 
   useEffect(() => {
     if (!profile) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setData(null);
       return;
     }
