@@ -69,8 +69,8 @@ export function PushNotificationDetail({ platformArn, platformName, platform, pr
 
   useEffect(() => { fetchDetail(); }, [fetchDetail]);
 
-  const enabledCount = data?.endpoints.filter((e) => e.enabled).length ?? 0;
-  const disabledCount = (data?.endpoints.length ?? 0) - enabledCount;
+  const enabledCount = data?.endpoints?.filter((e) => e.enabled).length ?? 0;
+  const disabledCount = (data?.endpoints?.length ?? 0) - enabledCount;
 
   return (
     <div className="space-y-4">
