@@ -42,3 +42,6 @@ next-env.d.ts
 
 .claude/settings.local.json
 .idea
+
+# superpowers design docs
+docs/superpowers/
