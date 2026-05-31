@@ -66,4 +66,28 @@ describe("GET /api/cognito", () => {
 
     expect(mockSend).toHaveBeenCalledTimes(2);
   });
+
+  it("handles null UserPools response", async () => {
+    mockSend.mockReset();
+    mockSend.mockResolvedValue({ UserPools: undefined, NextToken: undefined }); // null UserPools
+
+    const res = await GET(new NextRequest("http://localhost/api/cognito?profile=proj-prod"));
+    const data = await res.json();
+    expect(data.pools).toEqual([]);
+  });
+
+  it("handles account with undefined id and pool with undefined EstimatedNumberOfUsers", async () => {
+    vi.mocked(getAccounts).mockResolvedValue([
+      { name: "proj-prod", profile: "proj-prod", group: "proj" } as unknown as { id: string; name: string; profile: string; group: string },
+    ]);
+    mockSend.mockReset();
+    mockSend
+      .mockResolvedValueOnce({ UserPools: [{ Id: "pool-1", Name: "Pool 1" }], NextToken: undefined })
+      .mockResolvedValueOnce({ UserPool: { EstimatedNumberOfUsers: undefined } }); // undefined count
+
+    const res = await GET(new NextRequest("http://localhost/api/cognito?profile=proj-prod"));
+    const data = await res.json();
+    expect(data.pools[0].accountId).toBe(""); // undefined ?? ""
+    expect(data.pools[0].estimatedUsers).toBe(0); // undefined ?? 0
+  });
 });

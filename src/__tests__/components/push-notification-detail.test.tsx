@@ -79,4 +79,19 @@ describe("PushNotificationDetail", () => {
 
     await waitFor(() => expect(screen.getByText(/No registered device endpoints/i)).toBeInTheDocument());
   });
+
+  it("renders Disabled badge when Enabled is false", async () => {
+    vi.stubGlobal("fetch", makeConfigFetch({ "/api/sns-platforms/detail": { attributes: { Enabled: "false" }, endpoints: [] } }));
+    renderWithProviders(<PushNotificationDetail {...DEFAULT_PROPS} />, { profile: "proj-prod" });
+
+    await waitFor(() => expect(screen.getAllByText("Disabled").length).toBeGreaterThan(0));
+  });
+
+  it("renders unknown platform name as fallback", async () => {
+    const props = { ...DEFAULT_PROPS, platform: "UNKNOWN_PLATFORM" };
+    vi.stubGlobal("fetch", makeConfigFetch({ "/api/sns-platforms/detail": { attributes: {}, endpoints: [] } }));
+    renderWithProviders(<PushNotificationDetail {...props} />, { profile: "proj-prod" });
+
+    await waitFor(() => expect(screen.getByText("UNKNOWN_PLATFORM")).toBeInTheDocument()); // platform ?? platform fallback
+  });
 });

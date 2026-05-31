@@ -114,4 +114,40 @@ describe("GET /api/sns-platforms", () => {
 
     expect(data.platforms).toHaveLength(2);
   });
+
+  it("handles short ARN with fewer than 3 parts", async () => {
+    mockSend.mockReset();
+    vi.mocked(getAccounts).mockResolvedValue([MOCK_ACCOUNTS[0]]);
+    // ARN with only 1 part (no slashes) - tests else branch of parsePlatformFromArn and parseNameFromArn
+    const shortArn = "shortArn";
+    mockSend.mockImplementation((cmd: { _tag?: string }) => {
+      if (cmd._tag === "List") {
+        return Promise.resolve({ PlatformApplications: [{ PlatformApplicationArn: shortArn }], NextToken: undefined });
+      }
+      return Promise.resolve({ Attributes: { Enabled: "false" } });
+    });
+
+    const res = await GET(makeRequest("?profile=proj-prod"));
+    const data = await res.json();
+    expect(data.platforms[0].platform).toBe("UNKNOWN"); // parts.length < 2
+    expect(data.platforms[0].name).toBe(shortArn); // parts.length < 3, returns arn
+    expect(data.platforms[0].enabled).toBe(false); // Enabled === "false"
+  });
+
+  it("handles ARN with only 2 parts (platform but no name)", async () => {
+    mockSend.mockReset();
+    vi.mocked(getAccounts).mockResolvedValue([MOCK_ACCOUNTS[0]]);
+    const twoPartArn = "arn/GCM"; // 2 parts - platform extracted but name falls back to arn
+    mockSend.mockImplementation((cmd: { _tag?: string }) => {
+      if (cmd._tag === "List") {
+        return Promise.resolve({ PlatformApplications: [{ PlatformApplicationArn: twoPartArn }], NextToken: undefined });
+      }
+      return Promise.resolve({ Attributes: {} });
+    });
+
+    const res = await GET(makeRequest("?profile=proj-prod"));
+    const data = await res.json();
+    expect(data.platforms[0].platform).toBe("GCM"); // parts.length >= 2
+    expect(data.platforms[0].name).toBe(twoPartArn); // parts.length < 3, returns arn
+  });
 });
