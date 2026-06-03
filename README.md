@@ -7,7 +7,18 @@ Local dashboard to monitor AWS services (ECS, ECR, S3, Lambda, RDS, CloudFront, 
 ## Prerequisites
 
 - Node.js 18+
-- AWS CLI configured with profiles in `~/.aws/config`
+- AWS CLI configured with profiles in your AWS config file
+
+**macOS**
+- Install Node.js via [Homebrew](https://brew.sh): `brew install node`, or use [nvm](https://github.com/nvm-sh/nvm)
+- Install AWS CLI: `brew install awscli` or download the [.pkg installer](https://aws.amazon.com/cli/)
+- Config file location: `~/.aws/config`
+
+**Windows**
+- Install Node.js via [winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/): `winget install OpenJS.NodeJS`, or download the [.msi installer](https://nodejs.org)
+- Install AWS CLI: `winget install Amazon.AWSCLI` or download the [.msi installer](https://aws.amazon.com/cli/)
+- Config file location: `%USERPROFILE%\.aws\config` (e.g. `C:\Users\YourName\.aws\config`)
+- Alternatively, use [WSL2](https://learn.microsoft.com/en-us/windows/wsl/) and follow the macOS steps above
 
 Each profile needs read permissions for the services you want to monitor (e.g. `ecs:ListClusters`, `s3:ListBuckets`, `lambda:ListFunctions`, etc.).
 
@@ -65,4 +76,4 @@ Read-only views across all configured AWS accounts:
 
 ## How it works
 
-The app reads your local AWS profiles (`~/.aws/config` / `~/.aws/credentials`) via the AWS SDK `fromIni` credential provider. It calls AWS `List*`, `Describe*`, and `Get*` APIs — no resources are created or modified. No credentials are stored in the app itself.
+The app reads your local AWS profiles (`~/.aws/config` on macOS/Linux, `%USERPROFILE%\.aws\config` on Windows) via the AWS SDK `fromIni` credential provider. It calls AWS `List*`, `Describe*`, and `Get*` APIs — no resources are created or modified. No credentials are stored in the app itself.
