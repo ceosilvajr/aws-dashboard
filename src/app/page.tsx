@@ -9,7 +9,6 @@ import { EcrSection } from "@/components/sections/ecr-section";
 import { NetworkingSection } from "@/components/sections/networking-section";
 import { S3Section } from "@/components/sections/s3-section";
 import { SecuritySection } from "@/components/sections/security-section";
-import { WafSection } from "@/components/sections/waf-section";
 import { CdnSection } from "@/components/sections/cdn-section";
 import { ApiSection } from "@/components/sections/api-section";
 import { StacksSection } from "@/components/stacks-section";
@@ -34,7 +33,6 @@ function MainContent() {
         {section === "networking" && <NetworkingSection />}
         {section === "s3" && <S3Section />}
         {section === "security" && <SecuritySection />}
-        {section === "waf" && <WafSection />}
         {section === "cdn" && <CdnSection />}
         {section === "api" && <ApiSection />}
         {section === "stacks" && <StacksSection />}

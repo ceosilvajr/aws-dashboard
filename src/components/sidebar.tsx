@@ -6,7 +6,7 @@ import { useAccounts } from "@/context/accounts-context";
 import { useRegion } from "@/context/region-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
-  LayoutDashboard, Server, Network, HardDrive, Shield, ShieldAlert, Globe, Webhook,
+  LayoutDashboard, Server, Network, HardDrive, Shield, Globe, Webhook,
   Layers, Settings, ChevronLeft, ChevronRight, ChevronDown, UserPlus, Container, Users, Table2, Zap, Smartphone, TrendingDown, Bell,
 } from "lucide-react";
 import { useState } from "react";
@@ -18,7 +18,6 @@ const NAV_ITEMS: { id: Section; label: string; icon: typeof LayoutDashboard; gro
   { id: "networking", label: "Networking", icon: Network, group: "Resources" },
   { id: "s3", label: "S3 Buckets", icon: HardDrive, group: "Resources" },
   { id: "security", label: "Security", icon: Shield, group: "Resources" },
-  { id: "waf", label: "WAF", icon: ShieldAlert, group: "Resources" },
   { id: "cdn", label: "CDN", icon: Globe, group: "Resources" },
   { id: "api", label: "API Gateway", icon: Webhook, group: "Resources" },
   { id: "cognito", label: "Cognito", icon: Users, group: "Resources" },

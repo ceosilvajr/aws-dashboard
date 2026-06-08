@@ -9,7 +9,6 @@ export type Section =
   | "networking"
   | "s3"
   | "security"
-  | "waf"
   | "cdn"
   | "api"
   | "stacks"
