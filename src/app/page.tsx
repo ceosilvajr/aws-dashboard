@@ -15,6 +15,7 @@ import { StacksSection } from "@/components/stacks-section";
 import { SettingsSection } from "@/components/sections/settings-section";
 import { AccountsSection } from "@/components/sections/accounts-section";
 import { CognitoSection } from "@/components/sections/cognito-section";
+import { SecureKeysSection } from "@/components/sections/secure-keys-section";
 import { DynamoDbSection } from "@/components/sections/dynamodb-section";
 import { LambdaSection } from "@/components/sections/lambda-section";
 import { AmplifySection } from "@/components/sections/amplify-section";
@@ -38,6 +39,7 @@ function MainContent() {
         {section === "stacks" && <StacksSection />}
         {section === "accounts" && <AccountsSection />}
         {section === "cognito" && <CognitoSection />}
+        {section === "secure-keys" && <SecureKeysSection />}
         {section === "dynamodb" && <DynamoDbSection />}
         {section === "lambda" && <LambdaSection />}
         {section === "amplify" && <AmplifySection />}

@@ -14,6 +14,7 @@ export type Section =
   | "stacks"
   | "accounts"
   | "cognito"
+  | "secure-keys"
   | "dynamodb"
   | "lambda"
   | "amplify"

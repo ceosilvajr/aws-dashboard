@@ -7,7 +7,7 @@ import { useRegion } from "@/context/region-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   LayoutDashboard, Server, Network, HardDrive, Shield, Globe, Webhook,
-  Layers, Settings, ChevronLeft, ChevronRight, ChevronDown, UserPlus, Container, Users, Table2, Zap, Smartphone, TrendingDown, Bell,
+  Layers, Settings, ChevronLeft, ChevronRight, ChevronDown, UserPlus, Container, Users, Table2, Zap, Smartphone, TrendingDown, Bell, KeyRound,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -21,6 +21,7 @@ const NAV_ITEMS: { id: Section; label: string; icon: typeof LayoutDashboard; gro
   { id: "cdn", label: "CDN", icon: Globe, group: "Resources" },
   { id: "api", label: "API Gateway", icon: Webhook, group: "Resources" },
   { id: "cognito", label: "Cognito", icon: Users, group: "Resources" },
+  { id: "secure-keys", label: "Secure Keys", icon: KeyRound, group: "Resources" },
   { id: "dynamodb", label: "DynamoDB", icon: Table2, group: "Resources" },
   { id: "lambda", label: "Lambda", icon: Zap, group: "Resources" },
   { id: "amplify", label: "Amplify", icon: Smartphone, group: "Resources" },
