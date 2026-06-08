@@ -141,6 +141,13 @@ describe("Sidebar", () => {
     expect(screen.getByTestId("active-section").textContent).toBe("amplify");
   });
 
+  it("navigates to secure-keys section when Secure Keys is clicked", async () => {
+    renderSidebar();
+    await waitFor(() => expect(screen.getByText("Secure Keys")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Secure Keys"));
+    expect(screen.getByTestId("active-section").textContent).toBe("secure-keys");
+  });
+
   it("opens account dropdown when account button is clicked", async () => {
     vi.stubGlobal("fetch", vi.fn((url: string) => {
       if (url.includes("/api/config")) return Promise.resolve({ json: () => Promise.resolve({ defaultRegion: "ap-southeast-1", regions: ["ap-southeast-1", "us-east-1"] }) });

@@ -68,6 +68,7 @@ Read-only views across all configured AWS accounts:
 - CloudFront distributions
 - CloudFormation stacks
 - Cognito user pools
+- Secure Keys — Secrets Manager secrets and SSM Parameter Store parameters in two tabs, with a metadata detail view per item (no secret values are ever read or decrypted)
 - DynamoDB tables
 - VPCs and networking
 - WAF web ACLs — per-WebACL rule breakdown (active, disabled/overridden) split into managed and custom rules, plus AWS Managed Rule Groups best-practice recommendations that are not yet enabled
