@@ -70,7 +70,7 @@ Read-only views across all configured AWS accounts:
 - Cognito user pools
 - DynamoDB tables
 - VPCs and networking
-- WAF web ACLs
+- WAF web ACLs — per-WebACL rule breakdown (active, disabled/overridden) split into managed and custom rules, plus AWS Managed Rule Groups best-practice recommendations that are not yet enabled
 - Route53 hosted zones
 - Cost analysis
 

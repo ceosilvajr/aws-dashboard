@@ -3,6 +3,7 @@ import { WAFV2Client, GetWebACLCommand, ListResourcesForWebACLCommand } from "@a
 import { createClient } from "@/lib/aws-clients";
 import { getAccounts } from "@/lib/accounts";
 import { getRegion } from "@/lib/constants";
+import { getMissingRecommendations } from "@/lib/waf-recommendations";
 
 export async function GET(request: NextRequest) {
   const profile = request.nextUrl.searchParams.get("profile");
@@ -21,12 +22,40 @@ export async function GET(request: NextRequest) {
     ]);
 
     const acl = aclRes.WebACL!;
-    const rules = (acl.Rules ?? []).map((r) => ({
-      name: r.Name ?? "",
-      priority: r.Priority ?? 0,
-      action: r.Action ? Object.keys(r.Action)[0] ?? "none" : r.OverrideAction ? "override" : "none",
-      type: r.Statement?.ManagedRuleGroupStatement ? `Managed: ${r.Statement.ManagedRuleGroupStatement.VendorName}/${r.Statement.ManagedRuleGroupStatement.Name}` : r.Statement?.RateBasedStatement ? "RateBased" : r.Statement?.RuleGroupReferenceStatement ? "RuleGroup" : "Custom",
-    }));
+    const rules = (acl.Rules ?? []).map((r) => {
+      const managed = r.Statement?.ManagedRuleGroupStatement;
+      const action = r.Action ? Object.keys(r.Action)[0] ?? "none" : r.OverrideAction ? "override" : "none";
+      const category: "managed" | "custom" = managed ? "managed" : "custom";
+      const overridden = Boolean(r.OverrideAction && "Count" in r.OverrideAction);
+      const status: "enabled" | "disabled" | "overridden" = overridden
+        ? "overridden"
+        : action === "none"
+        ? "disabled"
+        : "enabled";
+      const type = managed
+        ? `Managed: ${managed.VendorName}/${managed.Name}`
+        : r.Statement?.RateBasedStatement
+        ? "RateBased"
+        : r.Statement?.RuleGroupReferenceStatement
+        ? "RuleGroup"
+        : "Custom";
+      return {
+        name: r.Name ?? "",
+        priority: r.Priority ?? 0,
+        action,
+        type,
+        category,
+        status,
+        ...(managed?.Name ? { managedRuleName: managed.Name } : {}),
+      };
+    });
+
+    const managedRules = rules.filter((r) => r.category === "managed");
+    const customRules = rules.filter((r) => r.category === "custom");
+    const enabledManagedNames = managedRules
+      .map((r) => r.managedRuleName)
+      .filter((n): n is string => Boolean(n));
+    const recommendations = getMissingRecommendations(enabledManagedNames);
 
     return NextResponse.json({
       name: acl.Name,
@@ -34,6 +63,9 @@ export async function GET(request: NextRequest) {
       capacity: acl.Capacity ?? 0,
       defaultAction: acl.DefaultAction ? Object.keys(acl.DefaultAction)[0] : "unknown",
       rules,
+      managedRules,
+      customRules,
+      recommendations,
       associatedResources: (resRes as { ResourceArns?: string[] }).ResourceArns ?? [],
     });
   } catch (e) {

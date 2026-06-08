@@ -150,4 +150,106 @@ describe("GET /api/waf/detail", () => {
     expect(data.rules).toHaveLength(0);
     expect(data.associatedResources).toHaveLength(2);
   });
+
+  it("classifies rules into managed vs custom and assigns status", async () => {
+    mockSend
+      .mockResolvedValueOnce({
+        WebACL: {
+          Name: "my-waf-acl",
+          ARN: "arn:aws:wafv2:ap-southeast-1:111:regional/webacl/my-waf-acl/acl-id-123",
+          Capacity: 1500,
+          DefaultAction: { Allow: {} },
+          Rules: [
+            {
+              Name: "AWSManagedRulesCommonRuleSet",
+              Priority: 1,
+              OverrideAction: { None: {} },
+              Statement: { ManagedRuleGroupStatement: { VendorName: "AWS", Name: "AWSManagedRulesCommonRuleSet" } },
+            },
+            {
+              Name: "AWSManagedRulesSQLiRuleSet-counting",
+              Priority: 2,
+              OverrideAction: { Count: {} },
+              Statement: { ManagedRuleGroupStatement: { VendorName: "AWS", Name: "AWSManagedRulesSQLiRuleSet" } },
+            },
+            {
+              Name: "MyCustomBlock",
+              Priority: 3,
+              Action: { Block: {} },
+              Statement: { ByteMatchStatement: {} },
+            },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({ ResourceArns: [] });
+
+    const res = await GET(new NextRequest("http://localhost/api/waf/detail?profile=proj-prod&id=acl-id-123&name=my-waf-acl"));
+    const data = await res.json();
+
+    const common = data.rules.find((r: { name: string }) => r.name === "AWSManagedRulesCommonRuleSet");
+    expect(common.category).toBe("managed");
+    expect(common.status).toBe("enabled");
+    expect(common.managedRuleName).toBe("AWSManagedRulesCommonRuleSet");
+
+    const sqli = data.rules.find((r: { name: string }) => r.name === "AWSManagedRulesSQLiRuleSet-counting");
+    expect(sqli.category).toBe("managed");
+    expect(sqli.status).toBe("overridden");
+
+    const custom = data.rules.find((r: { name: string }) => r.name === "MyCustomBlock");
+    expect(custom.category).toBe("custom");
+    expect(custom.status).toBe("enabled");
+
+    expect(data.managedRules).toHaveLength(2);
+    expect(data.customRules).toHaveLength(1);
+  });
+
+  it("returns recommendations for managed rule groups that are not enabled", async () => {
+    mockSend
+      .mockResolvedValueOnce({
+        WebACL: {
+          Name: "my-waf-acl",
+          ARN: "arn:aws:wafv2:ap-southeast-1:111:regional/webacl/my-waf-acl/acl-id-123",
+          Capacity: 700,
+          DefaultAction: { Allow: {} },
+          Rules: [
+            {
+              Name: "AWSManagedRulesCommonRuleSet",
+              Priority: 1,
+              OverrideAction: { None: {} },
+              Statement: { ManagedRuleGroupStatement: { VendorName: "AWS", Name: "AWSManagedRulesCommonRuleSet" } },
+            },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({ ResourceArns: [] });
+
+    const res = await GET(new NextRequest("http://localhost/api/waf/detail?profile=proj-prod&id=acl-id-123&name=my-waf-acl"));
+    const data = await res.json();
+
+    const recNames = data.recommendations.map((r: { name: string }) => r.name);
+    expect(recNames).not.toContain("AWSManagedRulesCommonRuleSet");
+    expect(recNames).toContain("AWSManagedRulesSQLiRuleSet");
+    expect(recNames).toContain("AWSManagedRulesKnownBadInputsRuleSet");
+  });
+
+  it("marks an action-less custom rule as disabled", async () => {
+    mockSend
+      .mockResolvedValueOnce({
+        WebACL: {
+          Name: "my-waf-acl",
+          ARN: "arn:aws:wafv2:ap-southeast-1:111:regional/webacl/my-waf-acl/acl-id-123",
+          Capacity: 100,
+          DefaultAction: { Allow: {} },
+          Rules: [
+            { Name: "NoOp", Priority: 1, Action: undefined, OverrideAction: undefined, Statement: { ByteMatchStatement: {} } },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({ ResourceArns: [] });
+
+    const res = await GET(new NextRequest("http://localhost/api/waf/detail?profile=proj-prod&id=acl-id-123&name=my-waf-acl"));
+    const data = await res.json();
+    expect(data.rules[0].status).toBe("disabled");
+    expect(data.rules[0].category).toBe("custom");
+  });
 });
