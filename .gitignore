@@ -40,8 +40,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-.claude/settings.local.json
+.claude
 .idea
 
 # superpowers design docs
 docs/superpowers/
+
+
