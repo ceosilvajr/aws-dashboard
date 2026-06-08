@@ -868,7 +868,7 @@
     "@smithy/util-waiter" "^4.2.16"
     tslib "^2.6.2"
 
-"@aws-sdk/client-secrets-manager@^3.1036.0":
+"@aws-sdk/client-secrets-manager@^3.1063.0":
   version "3.1063.0"
   resolved "https://registry.yarnpkg.com/@aws-sdk/client-secrets-manager/-/client-secrets-manager-3.1063.0.tgz#29ab42b43f89a9c7e9e6d6991d3c6f30de12b822"
   integrity sha512-oP3/vHpo93rb/0JWhNcLA7fVbV1I6fBV9DrprScf71t3EVzwMyqLnVuv+5q2/3o32sCZ58YouZmqL0CqczyQzA==
@@ -900,7 +900,7 @@
     "@smithy/types" "^4.14.2"
     tslib "^2.6.2"
 
-"@aws-sdk/client-ssm@^3.1036.0":
+"@aws-sdk/client-ssm@^3.1063.0":
   version "3.1063.0"
   resolved "https://registry.yarnpkg.com/@aws-sdk/client-ssm/-/client-ssm-3.1063.0.tgz#f25e7753856a7392121648e27f056da11384c983"
   integrity sha512-qLXNofwgCB7/3mhWR9pz/bnNgyvSxjp38SvhTazESrt3mLtX9+kMg8UOKTZol0mvZg209UVIS82xY1JhJDtGpA==
