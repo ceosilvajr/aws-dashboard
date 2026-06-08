@@ -152,14 +152,31 @@ describe("NetworkingSection", () => {
     await waitFor(() => expect(screen.getByText("1.2.3.4")).toBeInTheDocument());
   });
 
-  it("navigates to WAF detail view when ACL row is clicked", async () => {
+  it("shows managed/custom rules with status and recommendations in WAF detail", async () => {
     const mockAcls = [{ id: "acl-id-1", name: "my-waf-acl", arn: "arn:aws:wafv2:ap-southeast-1:111:regional/webacl/my-waf-acl/acl-id-1" }];
     const mockWafDetail = {
       name: "my-waf-acl",
       arn: "arn:aws:wafv2:ap-southeast-1:111:regional/webacl/my-waf-acl/acl-id-1",
       capacity: 1500,
       defaultAction: "Allow",
-      rules: [{ name: "AWSManagedRulesCommonRuleSet", priority: 1, action: "override", type: "Managed: AWS/AWSManagedRulesCommonRuleSet" }],
+      rules: [
+        { name: "AWSManagedRulesCommonRuleSet", priority: 1, action: "override", type: "Managed: AWS/AWSManagedRulesCommonRuleSet", category: "managed", status: "enabled", managedRuleName: "AWSManagedRulesCommonRuleSet" },
+        { name: "SQLiCounting", priority: 2, action: "override", type: "Managed: AWS/AWSManagedRulesSQLiRuleSet", category: "managed", status: "overridden", managedRuleName: "AWSManagedRulesSQLiRuleSet" },
+        { name: "MyCustomBlock", priority: 3, action: "block", type: "Custom", category: "custom", status: "enabled" },
+        { name: "DisabledCustom", priority: 4, action: "none", type: "Custom", category: "custom", status: "disabled" },
+      ],
+      managedRules: [
+        { name: "AWSManagedRulesCommonRuleSet", priority: 1, action: "override", type: "Managed: AWS/AWSManagedRulesCommonRuleSet", category: "managed", status: "enabled", managedRuleName: "AWSManagedRulesCommonRuleSet" },
+        { name: "SQLiCounting", priority: 2, action: "override", type: "Managed: AWS/AWSManagedRulesSQLiRuleSet", category: "managed", status: "overridden", managedRuleName: "AWSManagedRulesSQLiRuleSet" },
+      ],
+      customRules: [
+        { name: "MyCustomBlock", priority: 3, action: "block", type: "Custom", category: "custom", status: "enabled" },
+        { name: "DisabledCustom", priority: 4, action: "none", type: "Custom", category: "custom", status: "disabled" },
+      ],
+      recommendations: [
+        { name: "AWSManagedRulesKnownBadInputsRuleSet", vendor: "AWS", description: "Blocks known-bad request patterns." },
+        { name: "AWSManagedRulesLinuxRuleSet", vendor: "AWS", description: "Blocks Linux-specific exploitation patterns." },
+      ],
       associatedResources: [],
     };
 
@@ -177,7 +194,19 @@ describe("NetworkingSection", () => {
     fireEvent.click(screen.getByText("my-waf-acl").closest("tr")!);
 
     await waitFor(() => expect(screen.getByText("Back")).toBeInTheDocument());
-    // WAF detail shows rules
+
+    // Managed rules group is present with both managed rule names
     await waitFor(() => expect(screen.getByText("AWSManagedRulesCommonRuleSet")).toBeInTheDocument());
+    expect(screen.getByText("SQLiCounting")).toBeInTheDocument();
+    // Custom rules group
+    expect(screen.getByText("MyCustomBlock")).toBeInTheDocument();
+    expect(screen.getByText("DisabledCustom")).toBeInTheDocument();
+    // Status text is rendered (at least one enabled, one overridden, one disabled)
+    expect(screen.getAllByText("enabled").length).toBeGreaterThan(0);
+    expect(screen.getByText("overridden")).toBeInTheDocument();
+    expect(screen.getByText("disabled")).toBeInTheDocument();
+    // Recommendations section lists the not-enabled rule groups
+    expect(screen.getByText("AWSManagedRulesKnownBadInputsRuleSet")).toBeInTheDocument();
+    expect(screen.getByText("AWSManagedRulesLinuxRuleSet")).toBeInTheDocument();
   });
 });

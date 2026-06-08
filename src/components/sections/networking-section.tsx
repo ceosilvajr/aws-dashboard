@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/context/profile-context";
 import { useRegion } from "@/context/region-context";
-import { RefreshCw, ArrowLeft } from "lucide-react";
+import { ArrowLeft, ShieldAlert } from "lucide-react";
 import { useState, useEffect } from "react";
 
 type Subgroup = "WAF" | "ALB" | "VPC" | "Route53";
@@ -16,7 +16,9 @@ const SUBGROUPS: Subgroup[] = ["WAF", "ALB", "VPC", "Route53"];
 // ─── WAF ────────────────────────────────────────────────────────────────────
 
 interface WafAcl { id: string; name: string; arn: string }
-interface WafDetail { name: string; arn: string; capacity: number; defaultAction: string; rules: { name: string; priority: number; action: string; type: string }[]; associatedResources: string[] }
+interface WafRule { name: string; priority: number; action: string; type: string; category: "managed" | "custom"; status: "enabled" | "disabled" | "overridden"; managedRuleName?: string }
+interface WafRecommendation { name: string; vendor: string; description: string }
+interface WafDetail { name: string; arn: string; capacity: number; defaultAction: string; rules: WafRule[]; managedRules: WafRule[]; customRules: WafRule[]; recommendations: WafRecommendation[]; associatedResources: string[] }
 
 function WafDetailView({ acl, onBack }: { acl: WafAcl; onBack: () => void }) {
   const { profile } = useProfile();
@@ -51,21 +53,50 @@ function WafDetailView({ acl, onBack }: { acl: WafAcl; onBack: () => void }) {
           <CardContent><ul className="space-y-1 text-xs font-mono">{detail.associatedResources.map((r, i) => <li key={i} className="truncate">{r}</li>)}</ul></CardContent>
         </Card>
       )}
+      <WafRulesCard title="Managed Rules" rules={detail.managedRules} emptyText="No managed rule groups attached" />
+      <WafRulesCard title="Custom Rules" rules={detail.customRules} emptyText="No custom rules" />
       <Card>
-        <CardHeader><CardTitle className="text-base">Rules ({detail.rules.length})</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base flex items-center gap-2"><ShieldAlert className="h-4 w-4 text-amber-600" />Recommended but not enabled ({detail.recommendations.length})</CardTitle></CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader><TableRow><TableHead>Priority</TableHead><TableHead>Name</TableHead><TableHead>Action</TableHead><TableHead>Type</TableHead></TableRow></TableHeader>
-            <TableBody>
-              {detail.rules.map((r, i) => (
-                <TableRow key={i}><TableCell>{r.priority}</TableCell><TableCell className="font-medium">{r.name}</TableCell><TableCell><Badge variant="outline">{r.action}</Badge></TableCell><TableCell className="text-xs">{r.type}</TableCell></TableRow>
+          {detail.recommendations.length === 0 ? (
+            <p className="text-sm text-muted-foreground">All recommended AWS Managed Rule Groups are enabled.</p>
+          ) : (
+            <ul className="space-y-2">
+              {detail.recommendations.map((rec) => (
+                <li key={rec.name} className="rounded border border-amber-300/60 bg-amber-50/40 px-3 py-2 text-sm dark:bg-amber-950/20">
+                  <div className="flex items-center justify-between"><span className="font-medium">{rec.name}</span><Badge variant="outline">{rec.vendor}</Badge></div>
+                  <p className="mt-1 text-xs text-muted-foreground">{rec.description}</p>
+                </li>
               ))}
-              {detail.rules.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-4">No rules</TableCell></TableRow>}
-            </TableBody>
-          </Table>
+            </ul>
+          )}
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function wafStatusBadge(status: WafRule["status"]) {
+  const variant = status === "enabled" ? "default" : status === "overridden" ? "secondary" : "outline";
+  return <Badge variant={variant}>{status}</Badge>;
+}
+
+function WafRulesCard({ title, rules, emptyText }: { title: string; rules: WafRule[]; emptyText: string }) {
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-base">{title} ({rules.length})</CardTitle></CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader><TableRow><TableHead className="w-20">Priority</TableHead><TableHead>Name</TableHead><TableHead>Type</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+          <TableBody>
+            {rules.map((r) => (
+              <TableRow key={r.name}><TableCell>{r.priority}</TableCell><TableCell className="font-medium">{r.name}</TableCell><TableCell className="text-xs">{r.type}</TableCell><TableCell>{wafStatusBadge(r.status)}</TableCell></TableRow>
+            ))}
+            {rules.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-4">{emptyText}</TableCell></TableRow>}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }
 
