@@ -226,7 +226,7 @@ function EcsDetailView({ svc, onBack }: { svc: ServiceInfo; onBack: () => void }
                 </>
               )}
             </div>
-            {scaling.policies.length > 0 && (
+            {(scaling.policies?.length ?? 0) > 0 && (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -238,7 +238,7 @@ function EcsDetailView({ svc, onBack }: { svc: ServiceInfo; onBack: () => void }
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {scaling.policies.map((p) => (
+                  {(scaling.policies ?? []).map((p) => (
                     <TableRow key={p.name}>
                       <TableCell className="font-mono text-xs">{p.name}</TableCell>
                       <TableCell>{p.type}</TableCell>
