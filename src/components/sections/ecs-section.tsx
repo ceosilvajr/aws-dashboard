@@ -250,7 +250,7 @@ function EcsDetailView({ svc, onBack }: { svc: ServiceInfo; onBack: () => void }
                 </TableBody>
               </Table>
             )}
-            {scaling.policies.length === 0 && <p className="text-muted-foreground">No scaling policies configured</p>}
+            {(scaling.policies?.length ?? 0) === 0 && <p className="text-muted-foreground">No scaling policies configured</p>}
           </CardContent>
         </Card>
       )}
