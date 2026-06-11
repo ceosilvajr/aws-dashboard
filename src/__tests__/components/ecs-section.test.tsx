@@ -35,6 +35,22 @@ const MOCK_ECS_DETAIL = {
   envVars: [{ name: "APP_ENV", value: "production" }],
 };
 
+const MOCK_SCALING = {
+  resourceId: "service/my-cluster/my-service",
+  minCapacity: 1,
+  maxCapacity: 10,
+  suspendedState: { DynamicScalingInSuspended: true, DynamicScalingOutSuspended: false },
+  policies: [{
+    name: "cpu-policy",
+    type: "TargetTrackingScaling",
+    metric: "ECSServiceAverageCPUUtilization",
+    targetValue: 70,
+    scaleInCooldown: 300,
+    scaleOutCooldown: 60,
+    stepAdjustments: [],
+  }],
+};
+
 afterEach(() => { vi.unstubAllGlobals(); });
 
 describe("EcsSection", () => {
@@ -57,6 +73,7 @@ describe("EcsSection", () => {
     vi.stubGlobal("fetch", vi.fn((url: string) => {
       if (url.includes("/api/config")) return Promise.resolve({ ok: true, json: () => Promise.resolve({ defaultRegion: "ap-southeast-1", regions: ["ap-southeast-1"] }) });
       if (url.includes("/api/ecs/detail")) return Promise.resolve({ ok: true, json: () => Promise.resolve(MOCK_ECS_DETAIL) });
+      if (url.includes("/api/ecs/scaling")) return Promise.resolve({ ok: true, json: () => Promise.resolve({ error: "not found" }) });
       if (url.includes("/api/ecs")) return Promise.resolve({ ok: true, json: () => Promise.resolve({ services: MOCK_SERVICES, fetchedAt: new Date().toISOString() }) });
       return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     }));
@@ -67,5 +84,24 @@ describe("EcsSection", () => {
 
     await waitFor(() => expect(screen.getByText("Back")).toBeInTheDocument());
     expect(screen.getByText("APP_ENV")).toBeInTheDocument();
+  });
+
+  it("shows scaling panel with policies and suspended state in detail view", async () => {
+    vi.stubGlobal("fetch", vi.fn((url: string) => {
+      if (url.includes("/api/config")) return Promise.resolve({ ok: true, json: () => Promise.resolve({ defaultRegion: "ap-southeast-1", regions: ["ap-southeast-1"] }) });
+      if (url.includes("/api/ecs/detail")) return Promise.resolve({ ok: true, json: () => Promise.resolve(MOCK_ECS_DETAIL) });
+      if (url.includes("/api/ecs/scaling")) return Promise.resolve({ ok: true, json: () => Promise.resolve(MOCK_SCALING) });
+      if (url.includes("/api/ecs")) return Promise.resolve({ ok: true, json: () => Promise.resolve({ services: MOCK_SERVICES, fetchedAt: new Date().toISOString() }) });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    }));
+    renderWithProviders(<EcsSection />, { profile: "proj-prod" });
+
+    await waitFor(() => expect(screen.getByText("my-service")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("my-service").closest("tr")!);
+
+    await waitFor(() => expect(screen.getByText("cpu-policy")).toBeInTheDocument());
+    expect(screen.getByText("ECSServiceAverageCPUUtilization")).toBeInTheDocument();
+    expect(screen.getByText("Suspended")).toBeInTheDocument();
+    expect(screen.getByText("Active")).toBeInTheDocument();
   });
 });

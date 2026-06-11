@@ -132,18 +132,33 @@ export function EcsSection() {
   );
 }
 
+interface ScalingPolicy {
+  name: string; type: string; metric: string; targetValue: number | null;
+  scaleInCooldown: number | null; scaleOutCooldown: number | null;
+  stepAdjustments: { lower: number | null; upper: number | null; adjustment: number }[];
+}
+interface ScalingConfig {
+  minCapacity: number | null; maxCapacity: number | null;
+  suspendedState: { DynamicScalingInSuspended?: boolean; DynamicScalingOutSuspended?: boolean; ScheduledScalingSuspended?: boolean } | null;
+  policies: ScalingPolicy[];
+}
+
 function EcsDetailView({ svc, onBack }: { svc: ServiceInfo; onBack: () => void }) {
   const { profile } = useProfile();
+  const { region } = useRegion();
   const [detail, setDetail] = useState<EcsDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [scaling, setScaling] = useState<ScalingConfig | null>(null);
 
   useEffect(() => {
     if (!profile) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
-    fetch(`/api/ecs/detail?profile=${profile}&cluster=${encodeURIComponent(svc.cluster)}&service=${encodeURIComponent(svc.service)}`)
+    fetch(`/api/ecs/detail?profile=${profile}&cluster=${encodeURIComponent(svc.cluster)}&service=${encodeURIComponent(svc.service)}&region=${region}`)
       .then((r) => r.json()).then(setDetail).catch(() => setDetail(null)).finally(() => setLoading(false));
-  }, [profile, svc.cluster, svc.service]);
+    fetch(`/api/ecs/scaling?profile=${profile}&cluster=${encodeURIComponent(svc.cluster)}&service=${encodeURIComponent(svc.service)}&region=${region}`)
+      .then((r) => r.json()).then((d) => { if (!d.error) setScaling(d); }).catch(() => {});
+  }, [profile, region, svc.cluster, svc.service]);
 
   if (loading) return <Card><CardContent className="py-12 text-center"><RefreshCw className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></CardContent></Card>;
   if (!detail) return <Card><CardContent className="py-8 text-center text-muted-foreground">Failed to load details</CardContent></Card>;
@@ -192,6 +207,50 @@ function EcsDetailView({ svc, onBack }: { svc: ServiceInfo; onBack: () => void }
                 ))}
               </div>
             ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Scaling Configuration */}
+      {scaling && (
+        <Card>
+          <CardHeader><CardTitle className="text-base">Scaling Configuration</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div><p className="text-muted-foreground">Min Capacity</p><p className="font-medium">{scaling.minCapacity ?? "N/A"}</p></div>
+              <div><p className="text-muted-foreground">Max Capacity</p><p className="font-medium">{scaling.maxCapacity ?? "N/A"}</p></div>
+              {scaling.suspendedState && (
+                <>
+                  <div><p className="text-muted-foreground">Scale In</p><p className="font-medium">{scaling.suspendedState.DynamicScalingInSuspended ? "Suspended" : "Active"}</p></div>
+                  <div><p className="text-muted-foreground">Scale Out</p><p className="font-medium">{scaling.suspendedState.DynamicScalingOutSuspended ? "Suspended" : "Active"}</p></div>
+                </>
+              )}
+            </div>
+            {(scaling.policies?.length ?? 0) > 0 && (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Policy</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Metric</TableHead>
+                    <TableHead>Target</TableHead>
+                    <TableHead>Cooldown (In/Out)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(scaling.policies ?? []).map((p) => (
+                    <TableRow key={p.name}>
+                      <TableCell className="font-mono text-xs">{p.name}</TableCell>
+                      <TableCell>{p.type}</TableCell>
+                      <TableCell>{p.metric}</TableCell>
+                      <TableCell>{p.targetValue ?? "—"}</TableCell>
+                      <TableCell>{p.scaleInCooldown ?? "—"}s / {p.scaleOutCooldown ?? "—"}s</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+            {(scaling.policies?.length ?? 0) === 0 && <p className="text-muted-foreground">No scaling policies configured</p>}
           </CardContent>
         </Card>
       )}
