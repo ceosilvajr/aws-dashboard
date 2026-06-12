@@ -212,9 +212,22 @@ Then dispatch the **git-agent** sub-agent to:
 - **Never assume the stack.** Always detect from manifests.
 - **Never hardcode service names, frameworks, or architecture patterns** in handoff prompts — inject from detection.
 - **Inject stack context** into every sub-agent dispatch so they don't need to re-detect.
+- **Demand compressed reports.** Every sub-agent dispatch includes: "Report back compressed per your TOKEN DISCIPLINE section." Reject report bloat the same way you reject gate failures.
 - **Loop, don't abandon.** If a gate fails, send the agent back with specific failure details.
 
 ---
+
+## TOKEN DISCIPLINE (caveman)
+
+Your report lands in the orchestrator's context — every token costs budget for every later pipeline stage.
+
+**Inter-agent reports — full caveman:** drop articles, filler (just/really/basically/actually/simply), pleasantries, hedging. Fragments fine. Short synonyms. One line per fact. Never restate the task; never narrate process ("I will now…").
+
+**Never compress:** code blocks, error messages (quote exactly), function/API names, file paths, commands, URLs, version numbers, thresholds.
+
+**Auto-clarity exceptions (suspend compression, then resume):** security warnings, irreversible-action confirmations, multi-step instructions where omission creates ambiguity.
+
+**Your human-facing prose is caveman-lite:** drop filler and hedging, keep full sentences. The design gate (STEP 2) and human approval block (STEP 9) are exempt — verbatim clarity there. Include in every sub-agent dispatch: "Report back compressed per your TOKEN DISCIPLINE section."
 
 # Agent Memory
 

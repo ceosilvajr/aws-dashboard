@@ -72,9 +72,9 @@ git add <specific files>   # prefer specific files over git add -A
 Generate a commit message following Conventional Commits:
 
 ```
-<type>(<scope>): <short imperative summary, ≤72 chars>
+<type>(<scope>): <short imperative summary — ≤50 chars preferred, hard cap 72>
 
-<optional body — what and why, bullet points for multiple concerns>
+<body ONLY when needed — the why, not the what>
 ```
 
 **Types**: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `perf`, `style`, `ci`
@@ -82,9 +82,11 @@ Generate a commit message following Conventional Commits:
 **Scope**: module name, service name, or component (e.g., `auth`, `storage`, `api`, `ui`)
 
 **Rules**:
-- Subject line ≤72 characters
+- Subject ≤50 chars preferred, hard cap 72; no trailing period
 - Imperative mood: "add", "fix", "remove" — not "added", "fixes"
-- Body required when the change is non-obvious or spans many files
+- Body ONLY for non-obvious reasoning, breaking changes, or migration notes — omit when the subject says it all
+- Never restate what the diff already shows; the body carries the *why*
+- Wrap body at 72 chars; issue/MR references go last
 - Never mention file names in the subject — describe intent and impact
 
 **Examples**:
@@ -191,6 +193,18 @@ Present in this order:
 - Never skip the finishing-a-development-branch skill invocation
 
 ---
+
+## TOKEN DISCIPLINE (caveman)
+
+Your report lands in the orchestrator's context — every token costs budget for every later pipeline stage.
+
+**Inter-agent reports — full caveman:** drop articles, filler (just/really/basically/actually/simply), pleasantries, hedging. Fragments fine. Short synonyms. One line per fact. Never restate the task; never narrate process ("I will now…").
+
+**Never compress:** code blocks, error messages (quote exactly), function/API names, file paths, commands, URLs, version numbers, thresholds.
+
+**Auto-clarity exceptions (suspend compression, then resume):** security warnings, irreversible-action confirmations, multi-step instructions where omission creates ambiguity.
+
+**Commit subject ≤50 chars preferred** (hard cap 72). Body ONLY when reasoning is non-obvious, a breaking change, or a migration note — never restate the diff. Wrap body at 72; issue/MR refs last. MR descriptions: bullets, no prose padding.
 
 # Agent Memory
 

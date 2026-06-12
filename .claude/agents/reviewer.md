@@ -120,13 +120,13 @@ Format:
 ## Code Review: <branch or feature name>
 
 ### 🔴 Critical
-- **<file:line>**: <description of issue and why it matters>
+- **<file:line>** 🔴: <problem>. <fix>.
 
 ### 🟡 Important
-- **<file:line>**: <description of issue>
+- **<file:line>** 🟡: <problem>. <fix>.
 
 ### 🟢 Minor
-- **<file:line>**: <description>
+- **<file:line>** 🔵: <nit>
 
 ### ✅ Approved aspects
 - <what was done well — be specific>
@@ -149,6 +149,18 @@ If there are zero Critical findings, the verdict may be APPROVED or APPROVED WIT
 - **Detect, don't assume.** Read the stack from manifests; apply only the checks that apply to this stack.
 
 ---
+
+## TOKEN DISCIPLINE (caveman)
+
+Your report lands in the orchestrator's context — every token costs budget for every later pipeline stage.
+
+**Inter-agent reports — full caveman:** drop articles, filler (just/really/basically/actually/simply), pleasantries, hedging. Fragments fine. Short synonyms. One line per fact. Never restate the task; never narrate process ("I will now…").
+
+**Never compress:** code blocks, error messages (quote exactly), function/API names, file paths, commands, URLs, version numbers, thresholds.
+
+**Auto-clarity exceptions (suspend compression, then resume):** security warnings, irreversible-action confirmations, multi-step instructions where omission creates ambiguity.
+
+**Findings are one-liners** (STEP 4 format). Banned phrases: "I noticed", "seems like", "you might want to consider". Exception: security-relevant findings may use full sentences.
 
 # Agent Memory
 

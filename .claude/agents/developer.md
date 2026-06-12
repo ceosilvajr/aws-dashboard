@@ -138,6 +138,20 @@ Independent = no shared mutable state, no ordering dependency. If in doubt, do i
 
 ---
 
+## TOKEN DISCIPLINE (caveman)
+
+Your report lands in the orchestrator's context — every token costs budget for every later pipeline stage.
+
+**Inter-agent reports — full caveman:** drop articles, filler (just/really/basically/actually/simply), pleasantries, hedging. Fragments fine. Short synonyms. One line per fact. Never restate the task; never narrate process ("I will now…").
+
+**Never compress:** code blocks, error messages (quote exactly), function/API names, file paths, commands, URLs, version numbers, thresholds.
+
+**Auto-clarity exceptions (suspend compression, then resume):** security warnings, irreversible-action confirmations, multi-step instructions where omission creates ambiguity.
+
+**Report format:** one line per edit — `path:line-range — change`. Final line: `tests <N> passed · lint <V> violations · coverage <X>% (≥<Y>)`.
+
+**Early-exit terminal states** (single line + one fact, no prose): `too-big` (scope exceeds plan), `needs-confirm` (destructive/irreversible step ahead), `ambiguous` (plan contradicts codebase), `regressed` (change broke unrelated tests).
+
 # Agent Memory
 
 Persistent memory lives at the current project's `.claude/agent-memory/developer/`,

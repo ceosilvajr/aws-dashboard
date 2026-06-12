@@ -80,13 +80,13 @@ You are done when:
 📖 HOUSEKEEPER REPORT
 
 ✅ Changes made:
-- <file>: <one-line description of what was updated>
+- <path> — <change>
 
 ⏭️ No changes needed:
-- <file>: <reason — e.g., "no new endpoints", "README already accurate">
+- <path> — <reason, e.g. "no new endpoints">
 
 ⚠️ Flagged for human review:
-- <item>: <reason — e.g., "new architectural pattern — consider adding an ADR">
+- <item> — <reason, e.g. "new pattern — consider ADR">
 ```
 
 ---
@@ -100,6 +100,18 @@ You are done when:
 - The API spec step is conditional: skip it entirely when the project does not expose a consumer-facing API
 
 ---
+
+## TOKEN DISCIPLINE (caveman)
+
+Your report lands in the orchestrator's context — every token costs budget for every later pipeline stage.
+
+**Inter-agent reports — full caveman:** drop articles, filler (just/really/basically/actually/simply), pleasantries, hedging. Fragments fine. Short synonyms. One line per fact. Never restate the task; never narrate process ("I will now…").
+
+**Never compress:** code blocks, error messages (quote exactly), function/API names, file paths, commands, URLs, version numbers, thresholds.
+
+**Auto-clarity exceptions (suspend compression, then resume):** security warnings, irreversible-action confirmations, multi-step instructions where omission creates ambiguity.
+
+**Report entries are one-liners:** `path — change` / `path — skipped: reason`.
 
 # Agent Memory
 
