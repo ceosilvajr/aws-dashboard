@@ -1,204 +1,162 @@
 ---
 name: setup
-description: "Run /setup to verify that the local development environment is correctly configured before starting work. Checks that superpowers skills are installed, GitLab credentials are set, and all stack-specific tools (JVM, Docker, AWS, Node, Python, PHP, Flutter) are available and working. Produces a health report and offers to interactively fix any issues found. Trigger immediately when the user types /setup, 'check my env', 'am I set up?', 'can I run this locally?', or 'environment check'."
+description: "Run /setup to take a developer from a fresh clone to a running app on their machine — independently, without needing a teammate. Stages: environment health check (tools, GitLab creds, superpowers skills) → install dependencies → configure env files (flags exactly which secret values to request from the team lead) → start local backing services (DynamoDB local, PostgreSQL/Redis) → code generation → build/test verification → run the app and smoke-check its health endpoint. Trigger immediately when the user types /setup, 'onboard me', 'set up this project', 'first time setup', 'check my env', 'am I set up?', or 'help me run this locally for the first time'."
 ---
 
-# Project Setup Health Check
+# Project Setup — Fresh Clone to Running App
 
-Run three checks in parallel, then print a unified health report, then interactively offer fixes for every failure.
+Take the developer through seven stages. Stop and report at any stage that fails after fixes were offered; otherwise continue automatically to the next. The goal is **the app running locally** (or, for Lambda repos, the test suite green), with a clear checklist of anything that still needs a human.
+
+**Two rules above all:**
+1. **Never invent or guess secret values.** When an env var needs a real credential, name it, say where it comes from (team lead, AWS console, Alchemy, …), and leave it for the developer.
+2. **Never print secret values** back into the conversation — confirm them as "set" only.
 
 ---
 
-## The three checks
-
-### CHECK 1 — Superpowers Skills
-
-Find the superpowers plugin and verify key skills exist:
+## STAGE 0 — Identify the project
 
 ```bash
-SUPERPOWERS_BASE=$(ls -d ~/.claude/plugins/cache/claude-plugins-official/superpowers/*/skills 2>/dev/null | tail -1)
-echo "Base: $SUPERPOWERS_BASE"
-
-REQUIRED_SKILLS=(
-  "brainstorming"
-  "writing-plans"
-  "using-git-worktrees"
-  "test-driven-development"
-  "executing-plans"
-  "systematic-debugging"
-  "dispatching-parallel-agents"
-  "requesting-code-review"
-  "receiving-code-review"
-  "verification-before-completion"
-  "finishing-a-development-branch"
-)
-
-for skill in "${REQUIRED_SKILLS[@]}"; do
-  if [ -f "$SUPERPOWERS_BASE/$skill/SKILL.md" ]; then
-    echo "OK: $skill"
-  else
-    echo "MISSING: $skill"
-  fi
-done
+basename "$PWD"; git branch --show-current
 ```
 
-Also check project agent files reference the key pipeline skills:
-```bash
-grep -c "superpowers:brainstorming" .claude/agents/orchestrator.md 2>/dev/null || echo "0"
-```
-
-### CHECK 2 — VCS Credentials
+Read `.claude/rules/project-context.md` (purpose, port, prefix, quirks) and `.claude/rules/testing.md` (verification commands). Detect the stack from manifest files:
 
 ```bash
-# Check token env var
-if [ -n "$ANALITIKA_GITLAB_TOKEN" ]; then
-  # Test it against the API (don't print the token)
-  STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-    -H "PRIVATE-TOKEN: $ANALITIKA_GITLAB_TOKEN" \
-    "https://gitlab.com/api/v4/user")
-  echo "TOKEN_SET=yes TOKEN_API_STATUS=$STATUS"
-else
-  echo "TOKEN_SET=no"
-fi
-
-# Check glab CLI
-which glab 2>/dev/null && glab --version || echo "glab: not found"
-glab auth status 2>&1 | head -3
-```
-
-### CHECK 3 — Stack Detection + Prerequisites
-
-Detect the stack from manifest files in the current directory:
-
-```bash
-# Detect stacks (can be multiple in a monorepo)
-[ -f "build.gradle.kts" ] && echo "STACK:kotlin-ktor"
-[ -f "pom.xml" ] && echo "STACK:kotlin-jvm-maven"
+[ -f "build.gradle.kts" ] && echo "STACK:kotlin"
 [ -f "package.json" ] && echo "STACK:nodejs"
-[ -f "pyproject.toml" ] || [ -f "requirements.txt" ] && echo "STACK:python"
+{ [ -f "pyproject.toml" ] || [ -f "requirements.txt" ]; } && echo "STACK:python"
 [ -f "composer.json" ] && echo "STACK:php-laravel"
 [ -f "pubspec.yaml" ] && echo "STACK:flutter"
-[ -f "template.yml" ] || [ -f "serverless.yml" ] && echo "STACK:lambda-sam"
+[ -f "hardhat.config.ts" ] && echo "STACK:hardhat"
+{ [ -f "template.yml" ] || [ -f "template.yaml" ]; } && echo "STACK:lambda-sam"
 ```
-
-Then for each detected stack, read and run the checks from `references/stacks.md`.
 
 ---
 
-## Report format
+## STAGE 1 — Environment health check
 
-Print a clear report before offering any fixes:
+Run the three checks **in parallel**, then print the health report (format below):
+
+1. **Superpowers skills** — verify the plugin's key skills exist:
+   ```bash
+   SUPERPOWERS_BASE=$(ls -d ~/.claude/plugins/cache/claude-plugins-official/superpowers/*/skills 2>/dev/null | tail -1)
+   for skill in brainstorming writing-plans using-git-worktrees test-driven-development executing-plans systematic-debugging dispatching-parallel-agents requesting-code-review receiving-code-review verification-before-completion finishing-a-development-branch; do
+     [ -f "$SUPERPOWERS_BASE/$skill/SKILL.md" ] && echo "OK: $skill" || echo "MISSING: $skill"
+   done
+   ```
+2. **VCS credentials** — `ANALITIKA_GITLAB_TOKEN` set (test against `https://gitlab.com/api/v4/user`, never print it), `glab` installed and authenticated.
+3. **Stack prerequisites** — run the "Checks" block for the detected stack from `references/stacks.md` (Java 21, Node 20, Python 3.10+, PHP 8.2, Flutter SDK, Docker daemon, AWS profile `digigov-master`, …).
+
+For every ❌, offer the fix from the Fix Commands table (bottom of this file) interactively: `Run this now? [y/n/skip-all]`. Re-check after each accepted fix.
+
+---
+
+## STAGE 2 — Install dependencies
+
+Run the "Install" block for the stack from `references/stacks.md` (e.g. `npm install`, `python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt`, `composer install`, `flutter pub get`, `./gradlew build -x test`). Report what was installed and any failures.
+
+---
+
+## STAGE 3 — Environment files (the human-dependency stage)
+
+1. Find the example file: `.env.example`, `env.example`, or per-org files (broly: `config/env/.env.*`). If a `.env` is required and absent, copy the example.
+2. Parse the copied file for **empty values** and classify each var:
+   - **Derivable** — generate locally (`php artisan key:generate`, `npm run generate-wallet -- --save`) or safe defaults documented in `references/stacks.md`. Fill these.
+   - **Secret / external** — API keys, upstream URLs, Cognito pool IDs. **Do not fill.** Collect into the "request from team lead" list.
+3. **Empty-value trap (Laravel especially):** an empty `VAR=` line is NOT the same as an unset var — it overrides framework defaults with `""` and can break boot (e.g. `APP_TIMEZONE=`). Either fill a sane value or delete the empty line; never leave required vars empty.
+4. Check the project quirks in `rules/project-context.md` for extra env needs (krillin `MAPS_API_KEY` + `./tools/setup-ios-maps.sh` for iOS; broly crashes at startup without its dotenv files).
+
+---
+
+## STAGE 4 — Local backing services
+
+Start what the stack needs (details + exact commands in `references/stacks.md`):
+
+| Stack | Services |
+|---|---|
+| NestJS | DynamoDB local on :8000 + `npm run create-table` (+ seeds where defined) |
+| Laravel (bulma) | DynamoDB local on :7100 + `database/dynamodb/create-tables.sh` |
+| FastAPI (bordock) | `make -f Makerfile start` — PostgreSQL + Redis + API via docker compose |
+| FastAPI (pan), Flutter, Next.js, Hardhat, Kotlin | none required for local dev/tests |
+
+Docker must be running for any of these — that was checked in Stage 1.
+
+---
+
+## STAGE 5 — Code generation (Flutter only)
+
+krillin: `flutter packages pub run build_runner build --delete-conflicting-outputs`. broly: `make gen`. Skip silently for other stacks.
+
+---
+
+## STAGE 6 — Verify build + tests
+
+Run the project's QA commands from `.claude/rules/testing.md` (build, lint, tests). **Pre-existing test debt does not block onboarding** — if `project-context.md` marks the suite as under repair (krillin), run what works (`dart analyze`) and note the rest. Report pass/fail per command.
+
+---
+
+## STAGE 7 — Run it
+
+Invoke the **run-locally** skill (`.claude/skills/run-locally/`) — it knows the stack's run command, port, startup signal, and health endpoint. Then smoke-check:
+
+```bash
+curl -s http://localhost:<port><prefix>/health | head -1
+```
+
+For Kotlin Lambda repos there is no server — a green `./gradlew test` from Stage 6 is the success state. For Flutter, a successful run on a connected device/simulator (krillin via `./tools/run.sh`, broly via `make run-scpl`) is the success state.
+
+---
+
+## Final report
 
 ```
 ╔══════════════════════════════════════════════╗
-║          PROJECT SETUP HEALTH CHECK          ║
+║            PROJECT SETUP — <name>            ║
 ╚══════════════════════════════════════════════╝
+Stage 1  Environment      ✅ (or: ❌ 2 issues, 1 fixed)
+Stage 2  Dependencies     ✅
+Stage 3  Env files        ⚠️ 3 values needed from team lead
+Stage 4  Local services   ✅ dynamodb-local :8000
+Stage 5  Codegen          — (n/a)
+Stage 6  Build + tests    ✅ lint clean · 120 tests green
+Stage 7  Running          ✅ http://localhost:3000/mr-pogi/health → UP
 
-Project : <basename of $PWD>
-Stack   : <detected stack(s)>
-Date    : <today>
+📋 ASK YOUR TEAM LEAD FOR:
+  1. CHAT_API_KEY        (.env — upstream chat gateway key)
+  2. ...
 
-────────────────────────────────────────────────
-🧩  SUPERPOWERS SKILLS
-────────────────────────────────────────────────
-  ✅  brainstorming
-  ✅  writing-plans
-  ✅  using-git-worktrees
-  ✅  test-driven-development
-  ✅  executing-plans
-  ✅  systematic-debugging
-  ✅  dispatching-parallel-agents
-  ✅  requesting-code-review
-  ✅  receiving-code-review
-  ✅  verification-before-completion
-  ✅  finishing-a-development-branch
-  ✅  orchestrator.md references brainstorming
+📋 REMAINING MANUAL STEPS:
+  1. ...
 
-────────────────────────────────────────────────
-🔑  VCS CREDENTIALS
-────────────────────────────────────────────────
-  ✅  ANALITIKA_GITLAB_TOKEN is set (API: 200)
-  ✅  glab 1.51.0 installed
-  ✅  glab authenticated (ariel@analitika.ph)
-
-────────────────────────────────────────────────
-⚙️   STACK: Kotlin / Ktor (JVM)
-────────────────────────────────────────────────
-  ✅  Java 21.0.3 (GraalVM)
-  ✅  Gradle wrapper (build.gradle.kts found)
-  ✅  ./gradlew --version → 8.5
-  ✅  Docker 27.1.1 (daemon running)
-  ✅  AWS profile digigov-master (configured)
-  ❌  glab: not authenticated
-     → Fix: glab auth login
-
-════════════════════════════════════════════════
-STATUS: 1 issue found
-════════════════════════════════════════════════
+STATUS: READY TO DEVELOP / BLOCKED ON <n> ITEMS
 ```
 
-Use ✅ for pass, ❌ for fail, ⚠️ for warning (present but unexpected version).
-
----
-
-## Interactive fix flow
-
-After printing the full report, work through each ❌ failure one by one:
-
-For each failure:
-1. Print: `\n❌ ISSUE: <description>`
-2. Print: `   Proposed fix: <command or steps>`
-3. Ask: `   Run this now? [y/n/skip-all]`
-   - **y** → run the fix command, then re-run just that check and report new status
-   - **n** → skip this fix, add it to the "manual steps" list
-   - **skip-all** → stop offering fixes, print all remaining fixes as a manual checklist
-
-After working through all failures (or after `skip-all`):
-- If manual steps remain, print them as a numbered checklist under "📋 REMAINING MANUAL STEPS"
-- If everything is fixed, print: `✅ All issues resolved — you're ready to develop!`
-
-Warnings (⚠️) are never auto-offered for fixing — they appear in the report only. If the user asks about them directly, explain the concern.
+Use ✅ pass, ❌ fail, ⚠️ needs a human. Warnings are reported, never auto-fixed.
 
 ---
 
 ## Fix commands reference
 
-Keep these ready for each failure type:
-
-| Failure | Fix command |
-|---------|-------------|
-| ANALITIKA_GITLAB_TOKEN not set | `echo 'export ANALITIKA_GITLAB_TOKEN=<your-token>' >> ~/.zshrc && source ~/.zshrc` |
-| glab not found | `brew install glab` (macOS) or `apt-get install glab` (Linux) |
-| glab not authenticated | `glab auth login` |
-| Java not found | `brew install --cask temurin21` |
-| Java wrong version | `brew install --cask temurin21` + set JAVA_HOME |
-| gradlew not executable | `chmod +x ./gradlew` |
-| Docker not running | `open -a Docker` (macOS) or `sudo systemctl start docker` |
-| Docker not installed | `brew install --cask docker` |
-| AWS profile missing | `aws configure --profile digigov-master` |
-| Node not found / wrong version | `brew install node@20` or `nvm install 20` |
-| npm deps missing | `npm install` |
-| Python not found | `brew install python@3.11` |
-| venv not active | `python3 -m venv .venv && source .venv/bin/activate` |
-| PHP wrong version | `brew install php@8.2` |
-| Composer not found | `brew install composer` |
-| vendor/ missing | `composer install` |
-| Flutter not found | See https://docs.flutter.dev/get-started/install |
-| SAM not found | `brew install aws-sam-cli` |
-
-For fixes that require a token value (like ANALITIKA_GITLAB_TOKEN), never run the command automatically — always ask the user to provide the value and confirm.
-
----
-
-## Stack-specific check details
-
-See `references/stacks.md` for the exact commands run for each stack.
+| Failure | Fix |
+|---------|-----|
+| `ANALITIKA_GITLAB_TOKEN` not set | `echo 'export ANALITIKA_GITLAB_TOKEN=<your-token>' >> ~/.zshrc && source ~/.zshrc` (ask for the value — never invent) |
+| glab missing / unauthenticated | `brew install glab` / `glab auth login` |
+| Java missing or <21 | `brew install --cask temurin21` + set `JAVA_HOME` |
+| Node missing / <20 | `brew install node@20` or `nvm install 20` |
+| pnpm <9 (goku) | `npx -y pnpm@9 <command>` or `corepack enable && corepack prepare pnpm@9 --activate` |
+| Python <3.10 | `brew install python@3.11` |
+| PHP <8.2 / Composer missing | `brew install php@8.2` / `brew install composer` |
+| pcov missing (bulma coverage) | `pecl install pcov && docker-php-ext-enable pcov` (or `extension=pcov` in php.ini) |
+| Flutter missing | https://docs.flutter.dev/get-started/install |
+| Docker not running / missing | `open -a Docker` / `brew install --cask docker` |
+| AWS profile missing | `aws configure --profile digigov-master` (region `ap-southeast-1`) |
+| SAM missing | `brew install aws-sam-cli` |
+| `./gradlew` not executable | `chmod +x ./gradlew` |
 
 ---
 
 ## Scope notes
 
-- This skill checks the **current working directory** as the project root.
-- In a monorepo, it detects all stacks present (e.g., a repo with both `build.gradle.kts` and `package.json` gets both Kotlin and Node checks).
-- It does **not** run the full test suite — use `./gradlew test` (or stack equivalent) for that.
-- It does **not** check application-level secrets (DB passwords, S3 bucket names, etc.) — only tooling and auth.
+- Treats the **current working directory** as the project root; in a multi-stack repo, runs every detected stack's checks.
+- Stage 6 runs the gate commands once for verification — it is not a substitute for the QA pipeline.
+- Tooling and auth checks live here; per-stack install/env/service/run detail lives in `references/stacks.md` and the `run-locally` skill.
