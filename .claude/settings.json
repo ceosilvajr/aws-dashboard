@@ -2,6 +2,42 @@
   "permissions": {
     "allow": [
       "Edit(.claude/agents/**)"
+    ],
+    "deny": [
+      "Edit(.env)",
+      "Edit(.env.local)",
+      "Edit(.env.development)",
+      "Edit(.env.staging)",
+      "Edit(.env.production)",
+      "Edit(.env.*.local)",
+      "Edit(*.freezed.dart)",
+      "Edit(*.g.dart)",
+      "Edit(*.gen.dart)",
+      "Edit(lib/core/di/injection.config.dart)",
+      "Edit(package-lock.json)",
+      "Edit(yarn.lock)",
+      "Edit(pnpm-lock.yaml)",
+      "Edit(pubspec.lock)",
+      "Edit(composer.lock)",
+      "Bash(git push --force*)",
+      "Bash(git push -f *)",
+      "Bash(git push * --force*)",
+      "Bash(git push * -f)",
+      "Bash(git push * -f *)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/format-on-edit.sh",
+            "timeout": 30
+          }
+        ]
+      }
     ]
   }
 }

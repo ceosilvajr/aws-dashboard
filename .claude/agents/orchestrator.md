@@ -111,19 +111,19 @@ Invoke the code review request skill:
 Skill({ skill: "superpowers:requesting-code-review" })
 ```
 
-Then dispatch the **reviewer** sub-agent with:
+Then dispatch the **reviewer** and **security-reviewer** sub-agents **in parallel** (a single message with two Agent calls), each with:
 - The diff (worktree branch vs base)
 - The plan document
 - The detected stack context and architecture
 - Any `.claude/rules/*.md` enrichment
 
-The reviewer outputs findings categorized as Critical / Important / Minor. Share the findings with the developer via:
+The reviewer audits correctness, architecture, tests, and code quality; the security-reviewer audits authn/authz, PII handling, secrets, injection, and dependency risk. Both output findings categorized as Critical / Important / Minor. Share the combined findings with the developer via:
 
 ```
 Skill({ skill: "superpowers:receiving-code-review" })
 ```
 
-**Gate**: all Critical findings resolved. Loop developer ↔ reviewer until no Critical findings remain.
+**Gate**: zero Critical findings from **both** the reviewer and the security-reviewer. Loop developer ↔ reviewers until both report no Critical findings.
 
 ---
 
@@ -173,6 +173,7 @@ Worktree: <path>
 - Coverage: <X>% (threshold: <Y>%)
 - Lint: clean
 - Reviewer: approved (0 critical findings)
+- Security: approved (0 critical findings)
 - Docs: <updated/unchanged>
 
 🔍 Review the diff:

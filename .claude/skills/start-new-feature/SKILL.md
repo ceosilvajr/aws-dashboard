@@ -1,6 +1,6 @@
 ---
 name: start-new-feature
-description: "Use this skill when the user wants to implement a new feature, bug fix, or any spec-driven change end-to-end through the full development pipeline. Works for any stack (Ktor, NestJS, FastAPI, Laravel, Flutter, Next.js, Lambda, etc.). Invoke immediately whenever the user types /start-new-feature or provides a feature spec/requirement/ticket and wants full implementation. This skill hands the specification off to the orchestrator agent, which runs: (brainstorming gate for vague specs) → architect → worktree isolation → developer → reviewer → qa → housekeeper → human approval → git-agent. Use even for partial specs — the orchestrator handles clarification. Do NOT wait for the user to say 'use the orchestrator' — just use this skill whenever a new feature or bug fix needs to be built."
+description: "Use this skill when the user wants to implement a new feature, bug fix, or any spec-driven change end-to-end through the full development pipeline. Works for any stack (Ktor, NestJS, FastAPI, Laravel, Flutter, Next.js, Lambda, etc.). Invoke immediately whenever the user types /start-new-feature or provides a feature spec/requirement/ticket and wants full implementation. This skill hands the specification off to the orchestrator agent, which runs: (brainstorming gate for vague specs) → architect → worktree isolation → developer → reviewer + security-reviewer (parallel) → qa → housekeeper → human approval → git-agent. Use even for partial specs — the orchestrator handles clarification. Do NOT wait for the user to say 'use the orchestrator' — just use this skill whenever a new feature or bug fix needs to be built."
 ---
 
 # Start New Feature
@@ -30,7 +30,7 @@ Additional context:
 Instructions:
 - Detect the project stack from manifest files (do not assume a specific framework)
 - If the requirement is vague, run the brainstorming gate first and wait for user approval of the spec
-- Execute all pipeline stages in order: architect → worktree isolation → developer → reviewer → qa → housekeeper → git-agent
+- Execute all pipeline stages in order: architect → worktree isolation → developer → reviewer + security-reviewer (parallel) → qa → housekeeper → git-agent
 - Do not skip any stage
 - Use a git worktree for all implementation work
 - Pause and request human approval before committing and pushing
@@ -42,4 +42,4 @@ If the user's requirement is brief or ambiguous (e.g., "add a refresh token endp
 
 ## After launching
 
-Tell the user: "I've handed this off to the orchestrator. It will detect your project's stack, run through design → architect → worktree → developer → reviewer → QA → docs, then pause for your approval before pushing."
+Tell the user: "I've handed this off to the orchestrator. It will detect your project's stack, run through design → architect → worktree → developer → reviewer + security review → QA → docs, then pause for your approval before pushing."
