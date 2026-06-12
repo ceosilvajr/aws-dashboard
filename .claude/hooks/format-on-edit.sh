@@ -16,6 +16,9 @@ fi
 [ -n "${FILE:-}" ] && [ -f "$FILE" ] || exit 0
 
 ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
+# Formatters resolve config/ignore files from cwd (prettier v3 even respects
+# the cwd's .gitignore) — always run from the project root.
+cd "$ROOT" 2>/dev/null || exit 0
 
 # Never touch generated or vendored files.
 case "$FILE" in
