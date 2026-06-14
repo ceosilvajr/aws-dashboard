@@ -1,4 +1,4 @@
-import { ECSClient, ListClustersCommand, ListServicesCommand, DescribeServicesCommand, DescribeTaskDefinitionCommand } from "@aws-sdk/client-ecs";
+import { ECSClient, ListClustersCommand, ListServicesCommand, DescribeServicesCommand, DescribeTaskDefinitionCommand, Service } from "@aws-sdk/client-ecs";
 import {
   ElasticLoadBalancingV2Client,
   DescribeTargetGroupsCommand,
@@ -69,6 +69,8 @@ function formatActions(actions: { Type?: string; TargetGroupArn?: string; Redire
   }).join(", ");
 }
 
+const MAX_PAGES = 50;
+
 async function fetchAccountData(account: Account, region: string): Promise<ServiceInfo[]> {
   const credentials = fromIni({ profile: account.profile });
   const ecs = new ECSClient({ region, credentials });
@@ -83,20 +85,42 @@ async function fetchAccountData(account: Account, region: string): Promise<Servi
 
     for (const clusterArn of clusterArns) {
       const cluster = clusterArn.split("/").pop()!;
-      const { serviceArns } = await ecs.send(new ListServicesCommand({ cluster }));
-      if (!serviceArns?.length) continue;
+      const serviceArns: string[] = [];
+      let nextToken: string | undefined;
+      let pages = 0;
+      do {
+        const res = await ecs.send(new ListServicesCommand({ cluster, nextToken }));
+        if (res.serviceArns) serviceArns.push(...res.serviceArns);
+        nextToken = res.nextToken;
+        pages++;
+        if (pages >= MAX_PAGES) {
+          console.warn(`MAX_PAGES cap (${MAX_PAGES}) reached for cluster`, cluster);
+          break;
+        }
+      } while (nextToken);
+      if (!serviceArns.length) continue;
 
-      const { services } = await ecs.send(
-        new DescribeServicesCommand({ cluster, services: serviceArns })
-      );
-      if (!services) continue;
+      // DescribeServices supports max 10 at a time
+      const allServices: Service[] = [];
+      for (let i = 0; i < serviceArns.length; i += 10) {
+        const batch = serviceArns.slice(i, i + 10);
+        const batchIndex = i / 10;
+        try {
+          const { services: batchServices } = await ecs.send(
+            new DescribeServicesCommand({ cluster, services: batch })
+          );
+          if (batchServices) allServices.push(...batchServices);
+        } catch (err) {
+          console.warn(`DescribeServices batch ${batchIndex} failed for cluster`, cluster, (err as Error).message);
+        }
+      }
 
       // Fetch scaling targets for this cluster
       const scalingMap = new Map<string, { min: number; max: number }>();
       try {
         const scalingRes = await aas.send(new DescribeScalableTargetsCommand({
           ServiceNamespace: "ecs",
-          ResourceIds: services.map((s) => `service/${cluster}/${s.serviceName}`),
+          ResourceIds: allServices.map((s) => `service/${cluster}/${s.serviceName}`),
         }));
         for (const t of scalingRes.ScalableTargets ?? []) {
           const svcName = t.ResourceId?.split("/").pop() ?? "";
@@ -104,7 +128,7 @@ async function fetchAccountData(account: Account, region: string): Promise<Servi
         }
       } catch { /* no scaling configured */ }
 
-      for (const svc of services) {
+      for (const svc of allServices) {
         if (!svc.taskDefinition) continue;
         try {
           const { taskDefinition: td } = await ecs.send(
