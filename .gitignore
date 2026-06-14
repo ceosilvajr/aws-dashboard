@@ -40,10 +40,17 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-.claude
+.claude/worktrees
+.claude/settings.local.json
+.claude/agent-memory
 .idea
 
 # superpowers design docs
 docs/superpowers/
 
 
+
+# Graphify knowledge graph outputs (regenerate with: graphify analyze .)
+graph.html
+graph.json
+GRAPH_REPORT.md

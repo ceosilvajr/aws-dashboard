@@ -532,4 +532,220 @@ describe("GET /api/ecs", () => {
     expect(data.services[0].accountId).toBe(""); // undefined ?? ""
     expect(data.services[0].image).toBe("sub/image"); // split by "/" and take from index 1
   });
+
+  // --- NEW TESTS for review findings ---
+
+  it("paginates ListServices across multiple pages and describes all ARNs", async () => {
+    // page 1: 10 ARNs + nextToken; page 2: 5 ARNs, no token  → 15 total ARNs described
+    const page1Arns = Array.from({ length: 10 }, (_, i) =>
+      `arn:aws:ecs:ap-southeast-1:111:service/my-cluster/svc-${i}`
+    );
+    const page2Arns = Array.from({ length: 5 }, (_, i) =>
+      `arn:aws:ecs:ap-southeast-1:111:service/my-cluster/svc-${i + 10}`
+    );
+    const allArns = [...page1Arns, ...page2Arns];
+
+    const fakeServices = allArns.map((_, i) => ({
+      serviceName: `svc-${i}`,
+      taskDefinition: `arn:task:${i}`,
+      desiredCount: 1,
+      runningCount: 1,
+      loadBalancers: [],
+    }));
+
+    mockEcsSend
+      .mockResolvedValueOnce({ clusterArns: ["arn:aws:ecs:ap-southeast-1:111:cluster/my-cluster"] })
+      // page 1
+      .mockResolvedValueOnce({ serviceArns: page1Arns, nextToken: "tok1" })
+      // page 2
+      .mockResolvedValueOnce({ serviceArns: page2Arns })
+      // DescribeServices batch 1 (10 ARNs)
+      .mockResolvedValueOnce({ services: fakeServices.slice(0, 10) })
+      // DescribeServices batch 2 (5 ARNs)
+      .mockResolvedValueOnce({ services: fakeServices.slice(10) });
+
+    // DescribeTaskDefinition for each service
+    for (let i = 0; i < 15; i++) {
+      mockEcsSend.mockResolvedValueOnce({
+        taskDefinition: {
+          cpu: "256", memory: "512",
+          containerDefinitions: [{ name: "app", image: `my-image:v${i}` }],
+        },
+      });
+    }
+
+    mockAasSend.mockResolvedValueOnce({ ScalableTargets: [] });
+
+    const res = await GET(new NextRequest("http://localhost/api/ecs?profile=proj-prod"));
+    const data = await res.json();
+    expect(data.services).toHaveLength(15);
+  });
+
+  it("batches DescribeServices by 10 when there are more than 10 service ARNs", async () => {
+    const { DescribeServicesCommand } = await import("@aws-sdk/client-ecs");
+    const arns = Array.from({ length: 11 }, (_, i) =>
+      `arn:aws:ecs:ap-southeast-1:111:service/my-cluster/svc-${i}`
+    );
+    const fakeServices = arns.map((_, i) => ({
+      serviceName: `svc-${i}`,
+      taskDefinition: `arn:task:${i}`,
+      desiredCount: 1,
+      runningCount: 1,
+      loadBalancers: [],
+    }));
+
+    mockEcsSend
+      .mockResolvedValueOnce({ clusterArns: ["arn:aws:ecs:ap-southeast-1:111:cluster/my-cluster"] })
+      .mockResolvedValueOnce({ serviceArns: arns })
+      // batch 1 (10)
+      .mockResolvedValueOnce({ services: fakeServices.slice(0, 10) })
+      // batch 2 (1)
+      .mockResolvedValueOnce({ services: fakeServices.slice(10) });
+
+    // DescribeTaskDefinition for each service
+    for (let i = 0; i < 11; i++) {
+      mockEcsSend.mockResolvedValueOnce({
+        taskDefinition: {
+          cpu: "256", memory: "512",
+          containerDefinitions: [{ name: "app", image: `my-image:v${i}` }],
+        },
+      });
+    }
+
+    mockAasSend.mockResolvedValueOnce({ ScalableTargets: [] });
+
+    const res = await GET(new NextRequest("http://localhost/api/ecs?profile=proj-prod"));
+    const data = await res.json();
+
+    // DescribeServicesCommand should have been called exactly twice (two batches)
+    const describeCalls = vi.mocked(DescribeServicesCommand).mock.calls;
+    expect(describeCalls).toHaveLength(2);
+    expect(describeCalls[0][0].services).toHaveLength(10);
+    expect(describeCalls[1][0].services).toHaveLength(1);
+    expect(data.services).toHaveLength(11);
+  });
+
+  it("isolates DescribeServices batch failures — successful batches still appear in response", async () => {
+    // 11 ARNs → batch1 (10) throws, batch2 (1) succeeds
+    const arns = Array.from({ length: 11 }, (_, i) =>
+      `arn:aws:ecs:ap-southeast-1:111:service/my-cluster/svc-${i}`
+    );
+
+    mockEcsSend
+      .mockResolvedValueOnce({ clusterArns: ["arn:aws:ecs:ap-southeast-1:111:cluster/my-cluster"] })
+      .mockResolvedValueOnce({ serviceArns: arns })
+      // batch 1 throws
+      .mockRejectedValueOnce(new Error("ThrottlingException"))
+      // batch 2 succeeds with 1 service
+      .mockResolvedValueOnce({ services: [{
+        serviceName: "svc-10",
+        taskDefinition: "arn:task:10",
+        desiredCount: 1,
+        runningCount: 1,
+        loadBalancers: [],
+      }] });
+
+    // DescribeTaskDefinition for the surviving service
+    mockEcsSend.mockResolvedValueOnce({
+      taskDefinition: {
+        cpu: "256", memory: "512",
+        containerDefinitions: [{ name: "app", image: "my-image:v10" }],
+      },
+    });
+
+    mockAasSend.mockResolvedValueOnce({ ScalableTargets: [] });
+
+    const res = await GET(new NextRequest("http://localhost/api/ecs?profile=proj-prod"));
+    const data = await res.json();
+    // batch1 failed silently; only the 1 service from batch2 survives
+    expect(data.services).toHaveLength(1);
+    expect(data.services[0].service).toBe("svc-10");
+  });
+
+  it("caps ListServices pagination at MAX_PAGES (50) when nextToken never stops", async () => {
+    const { ListServicesCommand } = await import("@aws-sdk/client-ecs");
+    // ListServices always returns a nextToken — should stop at 50 calls
+    mockEcsSend
+      .mockResolvedValueOnce({ clusterArns: ["arn:aws:ecs:ap-southeast-1:111:cluster/my-cluster"] })
+      // All ListServices pages return a nextToken (infinite pagination)
+      .mockResolvedValue({ serviceArns: ["arn:svc/svc-0"], nextToken: "always-has-next" });
+
+    mockAasSend.mockResolvedValue({ ScalableTargets: [] });
+
+    // The call must complete (not loop forever)
+    const res = await GET(new NextRequest("http://localhost/api/ecs?profile=proj-prod"));
+    expect(res.status).toBe(200);
+
+    // ListServicesCommand constructor calls = exactly 50 (MAX_PAGES)
+    const listCalls = vi.mocked(ListServicesCommand).mock.calls;
+    expect(listCalls).toHaveLength(50);
+  });
+
+  it("logs console.warn when MAX_PAGES cap is hit during ListServices pagination", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    // ListServices always returns nextToken — triggers cap
+    mockEcsSend
+      .mockResolvedValueOnce({ clusterArns: ["arn:aws:ecs:ap-southeast-1:111:cluster/my-cluster"] })
+      .mockResolvedValue({ serviceArns: ["arn:svc/svc-0"], nextToken: "always-has-next" });
+
+    mockAasSend.mockResolvedValue({ ScalableTargets: [] });
+
+    await GET(new NextRequest("http://localhost/api/ecs?profile=proj-prod"));
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("MAX_PAGES"),
+      expect.anything(),
+    );
+    warnSpy.mockRestore();
+  });
+
+  it("logs console.warn when a DescribeServices batch fails", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const arns = Array.from({ length: 11 }, (_, i) =>
+      `arn:aws:ecs:ap-southeast-1:111:service/my-cluster/svc-${i}`
+    );
+
+    mockEcsSend
+      .mockResolvedValueOnce({ clusterArns: ["arn:aws:ecs:ap-southeast-1:111:cluster/my-cluster"] })
+      .mockResolvedValueOnce({ serviceArns: arns })
+      .mockRejectedValueOnce(new Error("ThrottlingException"))
+      .mockResolvedValueOnce({ services: [] });
+
+    mockAasSend.mockResolvedValueOnce({ ScalableTargets: [] });
+
+    await GET(new NextRequest("http://localhost/api/ecs?profile=proj-prod"));
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("DescribeServices batch"),
+      "my-cluster",
+      expect.stringContaining("ThrottlingException"),
+    );
+    warnSpy.mockRestore();
+  });
+
+  it("skips cluster when ListServices returns empty serviceArns array", async () => {
+    mockEcsSend
+      .mockResolvedValueOnce({ clusterArns: ["arn:aws:ecs:ap-southeast-1:111:cluster/my-cluster"] })
+      // page returns empty array — cluster should be skipped
+      .mockResolvedValueOnce({ serviceArns: [] });
+
+    mockAasSend.mockResolvedValueOnce({ ScalableTargets: [] });
+
+    const res = await GET(new NextRequest("http://localhost/api/ecs?profile=proj-prod"));
+    const data = await res.json();
+    expect(data.services).toEqual([]);
+  });
+
+  it("skips cluster when ListServices returns undefined serviceArns", async () => {
+    mockEcsSend
+      .mockResolvedValueOnce({ clusterArns: ["arn:aws:ecs:ap-southeast-1:111:cluster/my-cluster"] })
+      // page returns undefined serviceArns
+      .mockResolvedValueOnce({ serviceArns: undefined });
+
+    mockAasSend.mockResolvedValueOnce({ ScalableTargets: [] });
+
+    const res = await GET(new NextRequest("http://localhost/api/ecs?profile=proj-prod"));
+    const data = await res.json();
+    expect(data.services).toEqual([]);
+  });
 });

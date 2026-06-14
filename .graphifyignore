@@ -1,0 +1,33 @@
+# Next.js/Node.js — Graphify ignore
+# Node modules
+node_modules/
+
+# Next.js build
+.next/
+out/
+
+# Turborepo
+.turbo/
+
+# Build output
+dist/
+build/
+
+# Test coverage
+coverage/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment
+.env*
+
+# Docker
+Dockerfile*
+docker-compose*
+
+# Graphify outputs (never re-index)
+graph.html
+graph.json
+GRAPH_REPORT.md
