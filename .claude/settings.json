@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Edit(.claude/agents/**)"
+      "Edit(.claude/agents/**)",
+      "Bash(graphify*)"
     ],
     "deny": [
       "Edit(.env)",
@@ -25,6 +26,13 @@
       "Bash(git push * -f)",
       "Bash(git push * -f *)"
     ]
+  },
+  "mcpServers": {
+    "graphify": {
+      "command": "graphify",
+      "args": ["mcp"],
+      "env": {}
+    }
   },
   "hooks": {
     "PostToolUse": [

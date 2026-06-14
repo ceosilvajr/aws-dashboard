@@ -49,3 +49,8 @@ next-env.d.ts
 docs/superpowers/
 
 
+
+# Graphify knowledge graph outputs (regenerate with: graphify analyze .)
+graph.html
+graph.json
+GRAPH_REPORT.md
